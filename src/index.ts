@@ -6,7 +6,7 @@ import { saveSource, deleteSource, getSources, getNews } from './utils';
 dotenv.config({ path: '../.env' });
 
 const pool = new Pool({
-  host: 'localhost',
+  host: process.env.PG_HOST,
   user: process.env.PG_USER,
   password: process.env.PG_PASS,
   port: Number(process.env.PORT),
@@ -17,19 +17,19 @@ const client = new Discord.Client();
 
 client.on('ready', async () => {
   pool.connect((err, client) => {
-    if (err) return err.message;
+    if (err) return console.error('Could not connect to db', err.stack);
+    try {
+      client.query(
+        `CREATE TABLE IF NOT EXISTS users(userid BIGINT NOT NULL, username TEXT NOT NULL)`
+      );
+      client.query(
+        `CREATE TABLE IF NOT EXISTS sources(userid BIGINT NOT NULL, source TEXT NOT NULL)`
+      );
+    } catch (err) {
+      console.log(err);
+    }
     console.log('Connected to db');
   });
-  try {
-    pool.query(
-      `CREATE TABLE IF NOT EXISTS users(userid BIGINT NOT NULL, username TEXT NOT NULL)`
-    );
-    pool.query(
-      `CREATE TABLE IF NOT EXISTS sources(userid BIGINT NOT NULL, source TEXT NOT NULL)`
-    );
-  } catch (err) {
-    console.log(err);
-  }
 });
 
 client.on('message', async (msg) => {
