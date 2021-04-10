@@ -1,6 +1,6 @@
 import * as Discord from 'discord.js';
 import axios from 'axios';
-import * as sqlite3 from 'sqlite3';
+import { Pool } from 'pg';
 
 interface NewsData {
   id: string;
@@ -11,6 +11,26 @@ interface NewsData {
 }
 
 type FetchedNewsData = Array<NewsData>;
+
+export const createUser = async (pool: Pool, msg: Discord.Message) => {
+  pool.query(
+    'SELECT * FROM users WHERE userid = $1',
+    [msg.author.id],
+    (err, results) => {
+      if (err) console.log(err.message);
+      if (!results.rowCount) {
+        try {
+          pool.query('INSERT INTO users (userid, username) VALUES ($1, $2)', [
+            msg.author.id,
+            msg.author.username,
+          ]);
+        } catch (err) {
+          console.log(err.message);
+        }
+      }
+    }
+  );
+};
 
 export const fetchNews = async (
   url: string,
@@ -31,28 +51,28 @@ export const fetchAllNews = async (
       return news;
     })
   );
-  console.log(allNews);
   return allNews;
 };
 
-export const saveSource = (
+export const saveSource = async (
+  pool: Pool,
   msg: Discord.Message,
-  userId: string,
   command: string
 ) => {
+  //see if user exists
+  await createUser(pool, msg);
+
   let commandLength = command.length + 1;
   let sourceToSave = msg.content.slice(commandLength);
-  let db = new sqlite3.Database('./newsdb.db', sqlite3.OPEN_READWRITE);
-  let query = `SELECT * FROM sources WHERE userid = ? AND source = ?`;
-  db.get(query, [userId, sourceToSave], (err, row) => {
-    if (err) return err.message.toString();
-    console.log('row', row);
-    if (row === undefined) {
+  let query = 'SELECT * FROM sources WHERE userid = $1 AND source = $2';
+  pool.query(query, [msg.author.id, sourceToSave], (err, results) => {
+    if (err) return console.log(err.message.toString());
+    if (!results.rowCount) {
       try {
-        let insertData = db.prepare(`INSERT INTO sources VALUES (?,?)`);
-        insertData.run(userId, sourceToSave);
-        insertData.finalize();
-        db.close();
+        pool.query('INSERT INTO sources (userid, source) VALUES ($1, $2)', [
+          msg.author.id,
+          sourceToSave,
+        ]);
         msg.reply('Your source has been saved!');
       } catch (error) {
         msg.reply(error.message.toString());
@@ -64,30 +84,27 @@ export const saveSource = (
 };
 
 export const deleteSource = (
+  pool: Pool,
   msg: Discord.Message,
-  userId: string,
   command: string
 ) => {
   let commandLength = command.length + 1;
   let sourceToDelete = msg.content.slice(commandLength);
-  let db = new sqlite3.Database('./newsdb.db', sqlite3.OPEN_READWRITE);
-  let query = `SELECT * FROM sources WHERE userid = ? AND source = ?`;
-  db.get(query, [userId, sourceToDelete], (err, row) => {
-    if (err) return err.message.toString();
-    console.log('row', row);
-    if (row === undefined) {
+  let query = `SELECT * FROM sources WHERE userid = $1 AND source = $2`;
+  pool.query(query, [msg.author.id, sourceToDelete], (err, results) => {
+    if (err) return console.log(err.message);
+    if (!results.rowCount) {
       msg.reply("Sorry, I couldn't find that source");
     } else {
       try {
-        db.run(
-          `DELETE FROM sources WHERE userid = ? AND source = ?`,
-          [userId, sourceToDelete],
+        pool.query(
+          `DELETE FROM sources WHERE userid = $1 AND source = $2`,
+          [msg.author.id, sourceToDelete],
           (err) => {
             if (err) msg.reply("Something went wrong. Source wasn't deleted");
             msg.reply('Source was deleted');
           }
         );
-        db.close();
       } catch (error) {
         msg.reply(error.message.toString());
       }
@@ -95,37 +112,41 @@ export const deleteSource = (
   });
 };
 
-export const getSources = (msg: Discord.Message, userId: string) => {
-  let db = new sqlite3.Database('./newsdb.db', sqlite3.OPEN_READWRITE);
-  let query = `SELECT source FROM sources WHERE userid = ?`;
-  return db.all(query, [userId], (err, rows) => {
-    if (err) msg.reply(err.message.toString());
-    if (rows === undefined) {
-      msg.reply('You do not have sources');
-    } else {
-      let sources: string[] = [];
-      rows.forEach((row) => sources.push(row.source));
-      let replyMsg = sources.join('\n');
-      msg.reply(replyMsg);
-    }
-  });
+export const getSources = (pool: Pool, msg: Discord.Message) => {
+  let query = 'SELECT source FROM sources WHERE userid = $1';
+  try {
+    pool.query(query, [msg.author.id], (err, results) => {
+      if (err) console.log(err.message);
+      if (!results || !results.rowCount) {
+        msg.reply('You do not have sources');
+      } else {
+        let sources: string[] = [];
+        results.rows.forEach((row) => sources.push(row.source));
+        let replyMsg = sources.join('\n');
+        msg.reply(replyMsg);
+      }
+    });
+  } catch (err) {
+    console.log(err.message);
+  }
 };
 
-export const getNews = (msg: Discord.Message, userId: string) => {
-  let db = new sqlite3.Database('./newsdb.db', sqlite3.OPEN_READWRITE);
-  let query = `SELECT source FROM sources WHERE userid = ?`;
-  db.all(query, [userId], async (err, rows) => {
-    if (err) msg.reply(err.message.toString());
-    if (rows === undefined) {
-      msg.reply('You do not have news');
+export const getNews = (pool: Pool, msg: Discord.Message) => {
+  let query = 'SELECT source FROM sources WHERE userid = $1';
+  pool.query(query, [msg.author.id], async (err, results) => {
+    if (err) console.log(err.message);
+    if (!results || !results.rowCount) {
+      msg.reply("Sorry, it seems like you don't have sources yet");
     } else {
       let sources: string[] = [];
-      rows.forEach((row) => sources.push(row.source));
+      results.rows.forEach((row) => sources.push(row.source));
       const allNews = await fetchAllNews(sources);
       if (allNews) {
         allNews.flat().map((news) => {
           msg.reply(`${news.title}: \n ${news.originId}`);
         });
+      } else {
+        msg.reply('No news is good news');
       }
     }
   });
