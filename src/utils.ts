@@ -1,6 +1,6 @@
 import * as Discord from 'discord.js';
 import axios from 'axios';
-import { Pool } from 'pg';
+import { Client } from 'pg';
 
 interface NewsData {
   id: string;
@@ -12,15 +12,15 @@ interface NewsData {
 
 type FetchedNewsData = Array<NewsData>;
 
-export const createUser = async (pool: Pool, msg: Discord.Message) => {
-  pool.query(
+export const createUser = async (pg: Client, msg: Discord.Message) => {
+  pg.query(
     'SELECT * FROM users WHERE userid = $1',
     [msg.author.id],
     (err, results) => {
       if (err) console.log(err.message);
       if (!results.rowCount) {
         try {
-          pool.query('INSERT INTO users (userid, username) VALUES ($1, $2)', [
+          pg.query('INSERT INTO users (userid, username) VALUES ($1, $2)', [
             msg.author.id,
             msg.author.username,
           ]);
@@ -55,21 +55,21 @@ export const fetchAllNews = async (
 };
 
 export const saveSource = async (
-  pool: Pool,
+  pg: Client,
   msg: Discord.Message,
   command: string
 ) => {
   //see if user exists
-  await createUser(pool, msg);
+  await createUser(pg, msg);
 
   let commandLength = command.length + 1;
   let sourceToSave = msg.content.slice(commandLength);
   let query = 'SELECT * FROM sources WHERE userid = $1 AND source = $2';
-  pool.query(query, [msg.author.id, sourceToSave], (err, results) => {
+  pg.query(query, [msg.author.id, sourceToSave], (err, results) => {
     if (err) return console.log(err.message.toString());
     if (!results.rowCount) {
       try {
-        pool.query('INSERT INTO sources (userid, source) VALUES ($1, $2)', [
+        pg.query('INSERT INTO sources (userid, source) VALUES ($1, $2)', [
           msg.author.id,
           sourceToSave,
         ]);
@@ -84,20 +84,20 @@ export const saveSource = async (
 };
 
 export const deleteSource = (
-  pool: Pool,
+  pg: Client,
   msg: Discord.Message,
   command: string
 ) => {
   let commandLength = command.length + 1;
   let sourceToDelete = msg.content.slice(commandLength);
   let query = `SELECT * FROM sources WHERE userid = $1 AND source = $2`;
-  pool.query(query, [msg.author.id, sourceToDelete], (err, results) => {
+  pg.query(query, [msg.author.id, sourceToDelete], (err, results) => {
     if (err) return console.log(err.message);
     if (!results.rowCount) {
       msg.reply("Sorry, I couldn't find that source");
     } else {
       try {
-        pool.query(
+        pg.query(
           `DELETE FROM sources WHERE userid = $1 AND source = $2`,
           [msg.author.id, sourceToDelete],
           (err) => {
@@ -112,10 +112,10 @@ export const deleteSource = (
   });
 };
 
-export const getSources = (pool: Pool, msg: Discord.Message) => {
+export const getSources = (pg: Client, msg: Discord.Message) => {
   let query = 'SELECT source FROM sources WHERE userid = $1';
   try {
-    pool.query(query, [msg.author.id], (err, results) => {
+    pg.query(query, [msg.author.id], (err, results) => {
       if (err) console.log(err.message);
       if (!results || !results.rowCount) {
         msg.reply('You do not have sources');
@@ -131,9 +131,9 @@ export const getSources = (pool: Pool, msg: Discord.Message) => {
   }
 };
 
-export const getNews = (pool: Pool, msg: Discord.Message) => {
+export const getNews = (pg: Client, msg: Discord.Message) => {
   let query = 'SELECT source FROM sources WHERE userid = $1';
-  pool.query(query, [msg.author.id], async (err, results) => {
+  pg.query(query, [msg.author.id], async (err, results) => {
     if (err) console.log(err.message);
     if (!results || !results.rowCount) {
       msg.reply("Sorry, it seems like you don't have sources yet");

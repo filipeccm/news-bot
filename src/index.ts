@@ -1,11 +1,11 @@
 import * as Discord from 'discord.js';
-import { Pool } from 'pg';
+import { Client } from 'pg';
 import * as dotenv from 'dotenv';
 import { saveSource, deleteSource, getSources, getNews } from './utils';
 
 dotenv.config({ path: '../.env' });
 
-const pool = new Pool({
+const pg = new Client({
   host: process.env.PG_HOST,
   user: process.env.PG_USER,
   password: process.env.PG_PASS,
@@ -15,21 +15,28 @@ const pool = new Pool({
 
 const client = new Discord.Client();
 
+const botToken = process.env.BOT_TOKEN;
+try {
+  client.login(botToken);
+} catch (err) {
+  console.error('error on login', err.stack);
+}
+
 client.on('ready', async () => {
-  pool.connect((err, client) => {
+  pg.connect((err) => {
     if (err) return console.error('Could not connect to db', err.stack);
-    try {
-      client.query(
-        `CREATE TABLE IF NOT EXISTS users(userid BIGINT NOT NULL, username TEXT NOT NULL)`
-      );
-      client.query(
-        `CREATE TABLE IF NOT EXISTS sources(userid BIGINT NOT NULL, source TEXT NOT NULL)`
-      );
-    } catch (err) {
-      console.log(err);
-    }
     console.log('Connected to db');
   });
+  try {
+    pg.query(
+      `CREATE TABLE IF NOT EXISTS users(userid BIGINT NOT NULL, username TEXT NOT NULL)`
+    );
+    pg.query(
+      `CREATE TABLE IF NOT EXISTS sources(userid BIGINT NOT NULL, source TEXT NOT NULL)`
+    );
+  } catch (err) {
+    console.log(err);
+  }
 });
 
 client.on('message', async (msg) => {
@@ -42,21 +49,18 @@ client.on('message', async (msg) => {
   }
 
   if (msg.content.startsWith('!save source')) {
-    saveSource(pool, msg, '!save source');
+    saveSource(pg, msg, '!save source');
   }
 
   if (msg.content === '!get sources') {
-    getSources(pool, msg);
+    getSources(pg, msg);
   }
 
   if (msg.content === '!news') {
-    getNews(pool, msg);
+    getNews(pg, msg);
   }
 
   if (msg.content.startsWith('!delete source')) {
-    deleteSource(pool, msg, '!delete source');
+    deleteSource(pg, msg, '!delete source');
   }
 });
-
-const botToken = process.env.BOT_TOKEN;
-client.login(botToken);
