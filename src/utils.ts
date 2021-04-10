@@ -1,6 +1,6 @@
 import * as Discord from 'discord.js';
 import axios from 'axios';
-import { Client } from 'pg';
+import { Pool } from 'pg';
 
 interface NewsData {
   id: string;
@@ -12,7 +12,7 @@ interface NewsData {
 
 type FetchedNewsData = Array<NewsData>;
 
-export const createUser = async (pg: Client, msg: Discord.Message) => {
+export const createUser = async (pg: Pool, msg: Discord.Message) => {
   pg.query(
     'SELECT * FROM users WHERE userid = $1',
     [msg.author.id],
@@ -55,7 +55,7 @@ export const fetchAllNews = async (
 };
 
 export const saveSource = async (
-  pg: Client,
+  pg: Pool,
   msg: Discord.Message,
   command: string
 ) => {
@@ -84,7 +84,7 @@ export const saveSource = async (
 };
 
 export const deleteSource = (
-  pg: Client,
+  pg: Pool,
   msg: Discord.Message,
   command: string
 ) => {
@@ -112,7 +112,7 @@ export const deleteSource = (
   });
 };
 
-export const getSources = (pg: Client, msg: Discord.Message) => {
+export const getSources = (pg: Pool, msg: Discord.Message) => {
   let query = 'SELECT source FROM sources WHERE userid = $1';
   try {
     pg.query(query, [msg.author.id], (err, results) => {
@@ -131,7 +131,7 @@ export const getSources = (pg: Client, msg: Discord.Message) => {
   }
 };
 
-export const getNews = (pg: Client, msg: Discord.Message) => {
+export const getNews = (pg: Pool, msg: Discord.Message) => {
   let query = 'SELECT source FROM sources WHERE userid = $1';
   pg.query(query, [msg.author.id], async (err, results) => {
     if (err) console.log(err.message);

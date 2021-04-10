@@ -1,11 +1,11 @@
 import * as Discord from 'discord.js';
-import { Client } from 'pg';
+import { Pool } from 'pg';
 import * as dotenv from 'dotenv';
 import { saveSource, deleteSource, getSources, getNews } from './utils';
 
 dotenv.config({ path: '../.env' });
 
-const pg = new Client({
+const pg = new Pool({
   host: process.env.PG_HOST,
   user: process.env.PG_USER,
   password: process.env.PG_PASS,
