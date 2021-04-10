@@ -1,22 +1,21 @@
 {
-  "name": "discord-bot",
+  "name": "news-bot",
   "version": "1.0.0",
-  "description": "",
+  "description": "A discord bot which store sources and retrieve news to the user",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "author": "Filipe Mendonça",
   "license": "ISC",
   "dependencies": {
     "axios": "^0.21.1",
     "discord.js": "^12.5.1",
     "dotenv": "^8.2.0",
-    "feedly": "^0.1.6",
-    "sqlite3": "^5.0.2",
+    "pg": "^8.5.1",
     "typescript": "^4.2.3"
   },
   "devDependencies": {
-    "@types/sqlite3": "^3.1.7"
+    "@types/pg": "^7.14.11"
   }
 }

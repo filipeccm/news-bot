@@ -1,36 +1,38 @@
 import * as Discord from 'discord.js';
-import * as sqlite3 from 'sqlite3';
+import { Pool } from 'pg';
 import * as dotenv from 'dotenv';
-import { saveSource, getSources, getNews, deleteSource } from './utils';
+import { saveSource, deleteSource, getSources, getNews } from './utils';
 
 dotenv.config({ path: '../.env' });
 
+const pool = new Pool({
+  host: 'localhost',
+  user: process.env.PG_USER,
+  password: process.env.PG_PASS,
+  port: Number(process.env.PORT),
+  database: process.env.PG_DB,
+});
+
 const client = new Discord.Client();
 
-let db = new sqlite3.Database(
-  './newsdb.db',
-  sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE,
-  (err) => {
-    if (err) {
-      return console.error(err.message);
-    }
-    console.log('Connected to newsdb.');
+client.on('ready', async () => {
+  pool.connect((err, client) => {
+    if (err) return err.message;
+    console.log('Connected to db');
+  });
+  try {
+    pool.query(
+      `CREATE TABLE IF NOT EXISTS users(userid BIGINT NOT NULL, username TEXT NOT NULL)`
+    );
+    pool.query(
+      `CREATE TABLE IF NOT EXISTS sources(userid BIGINT NOT NULL, source TEXT NOT NULL)`
+    );
+  } catch (err) {
+    console.log(err);
   }
-);
-
-client.on('ready', () => {
-  console.log('Connected as ' + client?.user?.tag);
-  db.run(
-    `CREATE TABLE IF NOT EXISTS data(userid INTEGER NOT NULL, username TEXT NOT NULL)`
-  );
-  db.run(
-    `CREATE TABLE IF NOT EXISTS sources(userid INTEGER NOT NULL, source TEXT NOT NULL)`
-  );
 });
 
 client.on('message', async (msg) => {
-  const userId = msg.author.id;
-
   if (msg.author.bot) return;
 
   if (msg.content === '!commands') {
@@ -40,20 +42,21 @@ client.on('message', async (msg) => {
   }
 
   if (msg.content.startsWith('!save source')) {
-    saveSource(msg, userId, '!save source');
+    saveSource(pool, msg, '!save source');
   }
 
   if (msg.content === '!get sources') {
-    getSources(msg, userId);
+    getSources(pool, msg);
   }
 
   if (msg.content === '!news') {
-    getNews(msg, userId);
+    getNews(pool, msg);
   }
 
   if (msg.content.startsWith('!delete source')) {
-    deleteSource(msg, userId, '!delete source');
+    deleteSource(pool, msg, '!delete source');
   }
 });
 
-client.login(process.env.BOT_TOKEN);
+const botToken = process.env.BOT_TOKEN;
+client.login(botToken);
