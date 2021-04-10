@@ -12,6 +12,9 @@ const pg = new Client({
   port: Number(process.env.PORT),
   database: process.env.PG_DB,
   connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
 
 const client = new Discord.Client();
