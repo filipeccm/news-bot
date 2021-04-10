@@ -141,7 +141,7 @@ export const getNews = (pg: Pool, msg: Discord.Message) => {
       let sources: string[] = [];
       results.rows.forEach((row) => sources.push(row.source));
       const allNews = await fetchAllNews(sources);
-      if (allNews) {
+      if (allNews && allNews.length > 0) {
         allNews.flat().map((news) => {
           msg.reply(`${news.title}: \n ${news.originId}`);
         });
