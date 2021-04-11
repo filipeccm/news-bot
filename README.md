@@ -6,7 +6,7 @@ News Bot is a Discord bot that allows the user to store RSS URLs and retrieve ne
 Clone the repository into the directory and install the packages. To get your own bot token you have to first create an application at Discord.
 
 ```bash
-git clone 
+git clone https://github.com/filipeccm/news-bot.git
 cd news-bot
 npm install or yarn install
 ``` 
