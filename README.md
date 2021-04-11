@@ -24,9 +24,9 @@ Open Discord and you can give your bot these commands:
 
 **!get sources**: get the sources the user has already stored
 
-**!delete source <url>**: delete a source, where <url> is the source's link 
+**!delete source "url"**: delete a source, where "url" is the source's link 
 
-**!save source <url>**: save a new source, where <url> is the source's link
+**!save source "url"**: save a new source, where "url" is the source's link
 
 **!news**: retrieve the news from your sources 
 
